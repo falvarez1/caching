@@ -18,14 +18,17 @@ namespace Microsoft.Extensions.DependencyInjection
             services.TryAddSingleton<IPubSub, SimplePubSub>();
         }
 
-        public static void AddReplicatedCache(this IServiceCollection services)
-        {
-            AddReplicatedCache(services, null);
-        }
-
         public static void AddReplicatedCache(this IServiceCollection services, Action<ReplicatedCacheOptions>? configureOptions = null)
         {
-            services.Configure(configureOptions);
+            if (configureOptions != null)
+            {
+                services.Configure(configureOptions);
+            }
+            else
+            {
+                services.AddOptions();
+            }
+
             services.TryAddSingleton<IReplicatedCache, ReplicatedCache>();
         }
     }
