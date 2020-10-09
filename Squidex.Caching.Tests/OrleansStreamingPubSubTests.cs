@@ -19,6 +19,7 @@ using Xunit;
 
 namespace Squidex.Caching
 {
+    [Trait("Category", "Dependencies")]
     public class OrleansStreamingPubSubTests
     {
         private sealed class Configurator : ISiloConfigurator
