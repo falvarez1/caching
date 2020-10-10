@@ -21,11 +21,11 @@ namespace Squidex.Caching.Orleans
         private readonly ConcurrentBag<Action<object>> subscribers = new ConcurrentBag<Action<object>>();
         private readonly ILogger<OrleansStreamingPubSub> logger;
 
-        public OrleansStreamingPubSub(IGrainFactory grainFactory, ILocalSiloDetails localSiloDetails, ILogger<OrleansStreamingPubSub> logger)
+        public OrleansStreamingPubSub(IGrainFactory grainFactory, ILocalSiloDetails silo, ILogger<OrleansStreamingPubSub> logger)
         {
             hostGrain =
                 grainFactory.GetGrain<IStreamingPubSubHostGrain>(
-                    localSiloDetails.SiloAddress.ToParsableString());
+                    silo.SiloAddress.ToParsableString());
 
             this.logger = logger;
         }

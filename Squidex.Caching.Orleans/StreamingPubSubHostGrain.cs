@@ -9,6 +9,7 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Orleans;
+using Orleans.Runtime;
 using Orleans.Streams;
 using PubSubTest.Placement;
 
@@ -17,31 +18,43 @@ namespace Squidex.Caching.Orleans
     [LocalPlacement]
     public sealed class StreamingPubSubHostGrain : Grain, IStreamingPubSubHostGrain
     {
+        private static readonly TimeSpan DelayedDeactivation = TimeSpan.FromDays(10000);
         private readonly OrleansStreamingPubSub pubSub;
+        private readonly ILocalSiloDetails silo;
         private readonly ILogger<OrleansStreamingPubSub> logger;
         private StreamSubscriptionHandle<object>? subscription;
         private IAsyncStream<object>? stream;
 
-        public StreamingPubSubHostGrain(OrleansStreamingPubSub pubSub, ILogger<OrleansStreamingPubSub> logger)
+        public StreamingPubSubHostGrain(OrleansStreamingPubSub pubSub, ILocalSiloDetails silo, ILogger<OrleansStreamingPubSub> logger)
         {
             this.pubSub = pubSub;
+            this.silo = silo;
             this.logger = logger;
         }
 
         public override async Task OnActivateAsync()
         {
-            var streamProvider = GetStreamProvider(Constants.StreamProviderName);
+            var id = this.GetPrimaryKeyString();
 
-            stream = streamProvider.GetStream<object>(Constants.StreamId, Constants.StreamProviderName);
-
-            subscription = await stream.SubscribeAsync((data, token) =>
+            if (!string.Equals(id, silo.SiloAddress.ToParsableString()))
             {
-                pubSub.Publish(data);
+                DeactivateOnIdle();
+            }
+            else
+            {
+                DelayDeactivation(DelayedDeactivation);
 
-                return Task.CompletedTask;
-            });
+                var streamProvider = GetStreamProvider(Constants.StreamProviderName);
 
-            DelayDeactivation(TimeSpan.FromDays(100000));
+                stream = streamProvider.GetStream<object>(Constants.StreamId, Constants.StreamProviderName);
+
+                subscription = await stream.SubscribeAsync((data, token) =>
+                {
+                    pubSub.Publish(data);
+
+                    return Task.CompletedTask;
+                });
+            }
         }
 
         public override async Task OnDeactivateAsync()
