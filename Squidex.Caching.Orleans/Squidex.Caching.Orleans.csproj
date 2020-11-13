@@ -2,15 +2,6 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
-    <Authors>sebastianstehle</Authors>
-    <Company>Squidex UG (haftungsbeschränkt)</Company>
-    <Description>Squidex Helpers Helpers</Description>
-    <Copyright>MIT</Copyright>
-    <PackageTags>Squidex HeadlessCMS Caching Helpers</PackageTags>
-    <PackageIcon>logo-squared.png</PackageIcon>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/Squidex/text/</PackageProjectUrl>
-    <Version>1.1.0</Version>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
