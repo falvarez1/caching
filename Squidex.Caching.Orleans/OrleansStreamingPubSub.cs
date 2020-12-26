@@ -6,7 +6,6 @@
 // ==========================================================================
 
 using System;
-using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -18,8 +17,7 @@ namespace Squidex.Caching.Orleans
     public sealed class OrleansStreamingPubSub : IPubSub, IStartupTask
     {
         private readonly IStreamingPubSubHostGrain hostGrain;
-        private readonly ConcurrentBag<Action<object>> subscribers = new ConcurrentBag<Action<object>>();
-        private readonly ILogger<OrleansStreamingPubSub> logger;
+        private readonly Subscriptions subscriptions;
 
         public OrleansStreamingPubSub(IGrainFactory grainFactory, ILocalSiloDetails silo, ILogger<OrleansStreamingPubSub> logger)
         {
@@ -27,7 +25,7 @@ namespace Squidex.Caching.Orleans
                 grainFactory.GetGrain<IStreamingPubSubHostGrain>(
                     silo.SiloAddress.ToParsableString());
 
-            this.logger = logger;
+            subscriptions = new Subscriptions(logger);
         }
 
         public Task Execute(CancellationToken cancellationToken)
@@ -35,7 +33,7 @@ namespace Squidex.Caching.Orleans
             return hostGrain.ActivateAsync();
         }
 
-        public Task PublishAsync(object payload)
+        public Task PublishAsync(object? payload)
         {
             return hostGrain.SendAsync(payload);
         }
@@ -45,26 +43,16 @@ namespace Squidex.Caching.Orleans
             return Task.FromResult(-1);
         }
 
-        public void Publish(object payload)
+        public void Publish(object? payload)
         {
-            foreach (var subscriber in subscribers)
-            {
-                try
-                {
-                    subscriber(payload);
-                }
-                catch (Exception ex)
-                {
-                    logger.LogError(ex, "Subscriber failed to handle message {payload}", payload);
-                }
-            }
+            subscriptions.Publish(payload);
         }
 
-        public void Subscribe(Action<object> subscriber)
+        public Task SubscribeAsync(Action<object?> subscriber)
         {
-            var theSubscriber = subscriber ?? throw new ArgumentNullException(nameof(subscriber));
+            subscriptions.Subscribe(subscriber);
 
-            subscribers.Add(theSubscriber);
+            return Task.CompletedTask;
         }
     }
 }

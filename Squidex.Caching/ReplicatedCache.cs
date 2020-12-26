@@ -41,13 +41,13 @@ namespace Squidex.Caching
 
             if (options.Value.Enable)
             {
-                this.pubSub.Subscribe(OnMessage);
+                this.pubSub.SubscribeAsync(OnMessage).Forget();
             }
 
             this.options = options.Value;
         }
 
-        private void OnMessage(object message)
+        private void OnMessage(object? message)
         {
             if (message is InvalidateMessage invalidate && invalidate.Source != instanceId)
             {

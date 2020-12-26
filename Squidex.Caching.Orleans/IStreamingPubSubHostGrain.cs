@@ -12,7 +12,7 @@ namespace Squidex.Caching.Orleans
 {
     public interface IStreamingPubSubHostGrain : IGrainWithStringKey
     {
-        Task SendAsync(object payload);
+        Task SendAsync(object? payload);
 
         Task ActivateAsync();
     }

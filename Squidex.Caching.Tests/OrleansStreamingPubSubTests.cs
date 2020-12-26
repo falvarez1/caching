@@ -115,7 +115,7 @@ namespace Squidex.Caching
             await cluster.DisposeAsync();
         }
 
-        private async Task PublishAsync(int expectedCount)
+        private static async Task PublishAsync(int expectedCount)
         {
             var message = Guid.NewGuid().ToString();
 
@@ -124,7 +124,7 @@ namespace Squidex.Caching
             Assert.Equal(expectedCount, Silo.All.Count(x => x.Received.Contains(message)));
         }
 
-        private async Task<bool> WaitForClusterSizeAsync(TestCluster cluster, int expectedSize)
+        private static async Task<bool> WaitForClusterSizeAsync(TestCluster cluster, int expectedSize)
         {
             var managementGrain = cluster.Client.GetGrain<IManagementGrain>(0);
 

@@ -22,8 +22,8 @@ namespace Squidex.Caching.Orleans
         private readonly OrleansStreamingPubSub pubSub;
         private readonly ILocalSiloDetails silo;
         private readonly ILogger<OrleansStreamingPubSub> logger;
-        private StreamSubscriptionHandle<object>? subscription;
-        private IAsyncStream<object>? stream;
+        private StreamSubscriptionHandle<object?>? subscription;
+        private IAsyncStream<object?>? stream;
 
         public StreamingPubSubHostGrain(OrleansStreamingPubSub pubSub, ILocalSiloDetails silo, ILogger<OrleansStreamingPubSub> logger)
         {
@@ -46,7 +46,7 @@ namespace Squidex.Caching.Orleans
 
                 var streamProvider = GetStreamProvider(Constants.StreamProviderName);
 
-                stream = streamProvider.GetStream<object>(Constants.StreamId, Constants.StreamProviderName);
+                stream = streamProvider.GetStream<object?>(Constants.StreamId, Constants.StreamProviderName);
 
                 subscription = await stream.SubscribeAsync((data, token) =>
                 {
@@ -70,7 +70,7 @@ namespace Squidex.Caching.Orleans
             return Task.CompletedTask;
         }
 
-        public async Task SendAsync(object payload)
+        public async Task SendAsync(object? payload)
         {
             if (stream == null)
             {

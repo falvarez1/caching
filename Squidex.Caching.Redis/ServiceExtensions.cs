@@ -6,14 +6,18 @@
 // ==========================================================================
 
 using System;
-using System.Threading.Tasks;
+using Squidex.Caching;
+using Squidex.Caching.Redis;
 
-namespace Squidex.Caching
+namespace Microsoft.Extensions.DependencyInjection
 {
-    public interface IPubSub
+    public static class ServiceExtensions
     {
-        Task PublishAsync(object? payload);
+        public static void AddRedisPubSub(this IServiceCollection services, Action<RedisPubSubOptions> configure)
+        {
+            services.Configure(configure);
 
-        Task SubscribeAsync(Action<object?> subscriber);
+            services.AddSingleton<IPubSub, RedisPubSub>();
+        }
     }
 }

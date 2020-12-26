@@ -41,7 +41,7 @@ namespace Squidex.Caching
                 AllSilos.Add(this);
             }
 
-            PubSub.Subscribe(message =>
+            PubSub.SubscribeAsync(message =>
             {
                 received.Add(message);
             });
