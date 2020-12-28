@@ -24,7 +24,7 @@ namespace Squidex.Caching.Redis
         private readonly Subscriptions subscriptions;
         private readonly RedisPubSubOptions options;
         private readonly RedisChannel redisChannel = new RedisChannel("CachingPubSub", RedisChannel.PatternMode.Auto);
-        private readonly ILogger<RedisPubSub> log;
+        private readonly ILogger<RedisPubSub> logger;
         private ISubscriber? subscriber;
 
         private class LoggerTextWriter : TextWriter
@@ -55,9 +55,16 @@ namespace Squidex.Caching.Redis
         {
             this.options = options.Value;
 
-            this.log = logger;
+            this.logger = logger;
 
-            this.subscriptions = new Subscriptions(logger);
+            subscriptions = new Subscriptions(logger);
+
+            EnsureConnectedAsync().Forget();
+        }
+
+        public void Dispose()
+        {
+            subscriber?.Unsubscribe(redisChannel);
         }
 
         public async Task PublishAsync(object? payload)
@@ -92,7 +99,7 @@ namespace Squidex.Caching.Redis
                 {
                     if (subscriber == null)
                     {
-                        var writer = new LoggerTextWriter(log);
+                        var writer = new LoggerTextWriter(logger);
 
                         var connection = await options.ConnectAsync(writer);
 
@@ -104,6 +111,11 @@ namespace Squidex.Caching.Redis
                         });
                     }
                 }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Failed to connect to redis.");
+                    throw;
+                }
                 finally
                 {
                     connectionLock.Release();
@@ -113,50 +125,52 @@ namespace Squidex.Caching.Redis
             return subscriber;
         }
 
-        private void HandleMessage(RedisValue redisValue)
+        private void HandleMessage(RedisValue value)
         {
             if (subscriptions.IsEmpty)
             {
                 return;
             }
 
-            if (redisValue.IsNullOrEmpty)
+            if (value.IsNullOrEmpty)
             {
                 subscriptions.Publish(null);
             }
 
             try
             {
-                string value = redisValue;
-
-                var indexOfType = value.IndexOf('|');
-                if (indexOfType > 0)
-                {
-                    var typeName = value.Substring(0, indexOfType);
-
-                    var type = Type.GetType(typeName);
-
-                    if (type == null)
-                    {
-                        log.LogError("Cannot find type {typeName}.", typeName);
-                        return;
-                    }
-
-                    var json = value[(indexOfType + 1)..];
-
-                    var payload = JsonSerializer.Deserialize(json, type, Options);
-
-                    subscriptions.Publish(payload);
-                }
-                else
-                {
-                    log.LogError("Invalid payload {payload}.", value);
-                }
+                HandleMessageCore(value);
             }
             catch (Exception ex)
             {
-                log.LogError(ex, "Failed to handle payload {payload}", redisValue);
+                logger.LogError(ex, "Failed to handle payload {payload}", value);
             }
+        }
+
+        private void HandleMessageCore(string value)
+        {
+            var indexOfType = value.IndexOf('|');
+
+            if (indexOfType <= 0)
+            {
+                logger.LogError("Invalid payload {payload}.", value);
+            }
+
+            var typeName = value.Substring(0, indexOfType);
+
+            var type = Type.GetType(typeName);
+
+            if (type == null)
+            {
+                logger.LogError("Cannot find type {typeName}.", typeName);
+                return;
+            }
+
+            var json = value[(indexOfType + 1)..];
+
+            var payload = JsonSerializer.Deserialize(json, type, Options);
+
+            subscriptions.Publish(payload);
         }
     }
 }

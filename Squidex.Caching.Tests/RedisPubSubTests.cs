@@ -15,7 +15,7 @@ using Squidex.Caching.Redis;
 using StackExchange.Redis;
 using Xunit;
 
-namespace Squidex.Caching.Tests
+namespace Squidex.Caching
 {
     [Trait("Category", "Dependencies")]
     public class RedisPubSubTests

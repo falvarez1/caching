@@ -32,6 +32,7 @@
 
   <PropertyGroup>
     <CodeAnalysisRuleSet>..\Squidex.ruleset</CodeAnalysisRuleSet>
+    <RootNamespace>Squidex.Caching</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
