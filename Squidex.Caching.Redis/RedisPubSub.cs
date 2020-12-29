@@ -59,7 +59,7 @@ namespace Squidex.Caching.Redis
 
             subscriptions = new Subscriptions(logger);
 
-            EnsureConnectedAsync().Forget();
+            EnsureConnectedInternalAsync().Forget();
         }
 
         public void Dispose()
@@ -69,11 +69,11 @@ namespace Squidex.Caching.Redis
 
         public async Task PublishAsync(object? payload)
         {
-            var currentSubscriber = await EnsureConnectedAsync();
+            var currentSubscriber = await EnsureConnectedInternalAsync();
 
             if (payload != null)
             {
-                var value = $"{payload.GetType().FullName}|{JsonSerializer.Serialize(payload, Options)}";
+                var value = $"{payload.GetType().AssemblyQualifiedName}|{JsonSerializer.Serialize(payload, Options)}";
 
                 await currentSubscriber.PublishAsync(redisChannel, value, CommandFlags.None);
             }
@@ -85,12 +85,17 @@ namespace Squidex.Caching.Redis
 
         public async Task SubscribeAsync(Action<object?> subscriber)
         {
-            await EnsureConnectedAsync();
+            await EnsureConnectedInternalAsync();
 
             subscriptions.Subscribe(subscriber);
         }
 
-        private async Task<ISubscriber> EnsureConnectedAsync()
+        public async Task EnsureConnectedAsync()
+        {
+            await EnsureConnectedInternalAsync();
+        }
+
+        private async Task<ISubscriber> EnsureConnectedInternalAsync()
         {
             if (subscriber == null)
             {

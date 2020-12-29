@@ -5,7 +5,6 @@
 //  All rights reserved. Licensed under the MIT license.
 // ==========================================================================
 
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using FakeItEasy;
@@ -21,7 +20,22 @@ namespace Squidex.Caching
     public class RedisPubSubTests
     {
         [Fact]
-        public async Task Should_receive_pubsub_message()
+        public async Task Should_receive_simple_pubsub_messages()
+        {
+            var pubSubs = await CreatePubSubsAsync();
+
+            await PubSubTestHelper.PublishSimpleValuesAsync(pubSubs, pubSubs.Count, 2000);
+        }
+
+        [Fact]
+        public async Task Should_receive_complex_pubsub_messages()
+        {
+            var pubSubs = await CreatePubSubsAsync();
+
+            await PubSubTestHelper.PublishComplexValuesAsync(pubSubs, pubSubs.Count, 2000);
+        }
+
+        private static async Task<IList<IPubSub>> CreatePubSubsAsync()
         {
             var pubsub1 = new RedisPubSub(Options.Create(new RedisPubSubOptions
             {
@@ -33,42 +47,10 @@ namespace Squidex.Caching
                 Configuration = ConfigurationOptions.Parse("localhost")
             }), A.Fake<ILogger<RedisPubSub>>());
 
-            var received1 = new HashSet<Guid>();
-            var received2 = new HashSet<Guid>();
+            await pubsub1.EnsureConnectedAsync();
+            await pubsub2.EnsureConnectedAsync();
 
-            var sent = new HashSet<Guid>
-            {
-                Guid.NewGuid(),
-                Guid.NewGuid(),
-                Guid.NewGuid(),
-                Guid.NewGuid()
-            };
-
-            await pubsub1.SubscribeAsync(v =>
-            {
-                if (v is Guid guid)
-                {
-                    received1.Add(guid);
-                }
-            });
-
-            await pubsub2.SubscribeAsync(v =>
-            {
-                if (v is Guid guid)
-                {
-                    received2.Add(guid);
-                }
-            });
-
-            foreach (var message in sent)
-            {
-                await pubsub1.PublishAsync(message);
-            }
-
-            await Task.Delay(2000);
-
-            Assert.Equal(sent, received1);
-            Assert.Equal(sent, received2);
+            return new List<IPubSub> { pubsub1, pubsub2 };
         }
     }
 }
