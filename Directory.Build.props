@@ -2,7 +2,7 @@
   <PropertyGroup>
     <Authors>sebastianstehle</Authors>
     <Company>Squidex UG (haftungsbeschränkt)</Company>
-    <Description>Squidex Helpers Helpers</Description>
+    <Description>Squidex Caching Helpers</Description>
     <Copyright>MIT</Copyright>
     <PackageTags>Squidex HeadlessCMS Caching Helpers</PackageTags>
     <PackageIcon>logo-squared.png</PackageIcon>
