@@ -5,15 +5,11 @@
 //  All rights reserved. Licensed under the MIT license.
 // ==========================================================================
 
-using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Orleans.Configuration;
 using Orleans.Hosting;
 using Orleans.Runtime;
@@ -29,61 +25,20 @@ namespace Squidex.Caching
         {
             public void Configure(ISiloBuilder siloBuilder)
             {
-                siloBuilder.ConfigureLogging(builder =>
-                {
-                    builder.AddConsole();
-                    builder.AddDebug();
-                });
-
                 siloBuilder.AddOrleansPubSub();
-                siloBuilder.AddStartupTask<SiloHandle>();
             }
-        }
-
-        protected sealed class SiloHandle : IStartupTask, IDisposable
-        {
-            private static readonly ConcurrentDictionary<SiloHandle, SiloHandle> AllSilos = new ConcurrentDictionary<SiloHandle, SiloHandle>();
-
-            public IPubSub PubSub { get; }
-
-            public static ICollection<SiloHandle> All => AllSilos.Keys;
-
-            public SiloHandle(IPubSub pubSub)
-            {
-                PubSub = pubSub;
-            }
-
-            public static void Clear()
-            {
-                AllSilos.Clear();
-            }
-
-            public Task Execute(CancellationToken cancellationToken)
-            {
-                AllSilos.TryAdd(this, this);
-
-                return Task.CompletedTask;
-            }
-
-            public void Dispose()
-            {
-                AllSilos.TryRemove(this, out _);
-            }
-        }
-
-        public OrleansStreamingPubSubTests()
-        {
-            SiloHandle.Clear();
         }
 
         [Fact]
         public async Task Should_receive_simple_pubsub_messages()
         {
-            var (pubSubs, cluster) = await CreateSilosAsync();
+            var cluster = await CreateSilosAsync();
 
             try
             {
                 await WaitForClusterSizeAsync(cluster, 3);
+
+                var pubSubs = GetPubSubs(cluster);
 
                 await PubSubTestHelper.PublishSimpleValuesAsync(pubSubs, 3);
             }
@@ -96,11 +51,13 @@ namespace Squidex.Caching
         [Fact]
         public async Task Should_receive_complex_pubsub_messages()
         {
-            var (pubSubs, cluster) = await CreateSilosAsync();
+            var cluster = await CreateSilosAsync();
 
             try
             {
                 await WaitForClusterSizeAsync(cluster, 3);
+
+                var pubSubs = GetPubSubs(cluster);
 
                 await PubSubTestHelper.PublishComplexValuesAsync(pubSubs, 3);
             }
@@ -113,10 +70,12 @@ namespace Squidex.Caching
         [Fact]
         public async Task Should_not_send_message_to_dead_member()
         {
-            var (pubSubs, cluster) = await CreateSilosAsync();
+            var cluster = await CreateSilosAsync();
 
             try
             {
+                var pubSubs = GetPubSubs(cluster);
+
                 await cluster.StopSiloAsync(cluster.Silos[1]);
 
                 await WaitForClusterSizeAsync(cluster, 2);
@@ -132,10 +91,12 @@ namespace Squidex.Caching
         [Fact]
         public async Task Should_not_send_message_to_dead_but_not_unregistered_member()
         {
-            var (pubSubs, cluster) = await CreateSilosAsync();
+            var cluster = await CreateSilosAsync();
 
             try
             {
+                var pubSubs = GetPubSubs(cluster);
+
                 await cluster.StopSiloAsync(cluster.Silos[1]);
 
                 await PubSubTestHelper.PublishComplexValuesAsync(pubSubs, 2);
@@ -149,13 +110,15 @@ namespace Squidex.Caching
         [Fact]
         public async Task Should_send_message_to_new_member()
         {
-            var (pubSubs, cluster) = await CreateSilosAsync();
+            var cluster = await CreateSilosAsync();
 
             try
             {
                 cluster.StartAdditionalSilo();
 
                 await WaitForClusterSizeAsync(cluster, 4);
+
+                var pubSubs = GetPubSubs(cluster);
 
                 await PubSubTestHelper.PublishComplexValuesAsync(pubSubs, 4);
             }
@@ -165,7 +128,7 @@ namespace Squidex.Caching
             }
         }
 
-        private static async Task<(IList<IPubSub>, TestCluster)> CreateSilosAsync()
+        private static async Task<TestCluster> CreateSilosAsync()
         {
             var cluster =
                 new TestClusterBuilder(3)
@@ -174,7 +137,14 @@ namespace Squidex.Caching
 
             await cluster.DeployAsync();
 
-            return (SiloHandle.All.Select(x => x.PubSub).ToList(), cluster);
+            return cluster;
+        }
+
+        private static List<IPubSub> GetPubSubs(TestCluster cluster)
+        {
+            return cluster.Silos.OfType<InProcessSiloHandle>()
+                .Select(x => x.SiloHost.Services.GetRequiredService<IPubSub>())
+                .ToList();
         }
 
         private static async Task<bool> WaitForClusterSizeAsync(TestCluster cluster, int expectedSize)
