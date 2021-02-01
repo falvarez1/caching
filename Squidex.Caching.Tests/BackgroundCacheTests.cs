@@ -82,7 +82,7 @@ namespace Squidex.Caching
                 Assert.Equal(11, value);
             }
 
-            now += TimeSpan.FromMinutes(55);
+            now += TimeSpan.FromMinutes(58);
 
             var valuesAfterExpiration = await Task.WhenAll(Enumerable.Repeat(1, 20).Select(x => GetOrCreateValue()));
 
