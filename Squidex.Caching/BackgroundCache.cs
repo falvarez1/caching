@@ -14,7 +14,7 @@ namespace Squidex.Caching
 {
     public sealed class BackgroundCache : IBackgroundCache
     {
-        private static readonly TimeSpan MaxComputionTime = TimeSpan.FromMinutes(1);
+        private static readonly TimeSpan MaxComputionTime = TimeSpan.FromMinutes(2);
         private readonly object[] locks = new object[32];
         private readonly ConcurrentDictionary<object, bool> isUpdating = new ConcurrentDictionary<object, bool>();
         private readonly IMemoryCache memoryCache;
