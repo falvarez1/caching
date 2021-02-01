@@ -18,6 +18,11 @@ namespace Microsoft.Extensions.DependencyInjection
             services.TryAddSingleton<IPubSub, SimplePubSub>();
         }
 
+        public static void AddBackgroundCache(this IServiceCollection services)
+        {
+            services.TryAddSingleton<IBackgroundCache, BackgroundCache>();
+        }
+
         public static void AddAsyncLocalCache(this IServiceCollection services)
         {
             services.TryAddSingleton<ILocalCache, AsyncLocalCache>();
