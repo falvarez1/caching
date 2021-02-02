@@ -25,7 +25,7 @@ namespace Squidex.Caching
         {
             public Guid Source { get; set; }
 
-            public string Key { get; set; }
+            public string[] Keys { get; set; }
         }
 
         public ReplicatedCache(IMemoryCache memoryCache, IPubSub pubSub, IOptions<ReplicatedCacheOptions> options)
@@ -49,37 +49,49 @@ namespace Squidex.Caching
 
         private void OnMessage(object? message)
         {
-            if (message is InvalidateMessage invalidate && invalidate.Source != instanceId)
+            if (message is InvalidateMessage invalidate)
             {
-                memoryCache.Remove(invalidate.Key);
+                if (invalidate.Keys != null && invalidate.Source != instanceId)
+                {
+                    foreach (var key in invalidate.Keys)
+                    {
+                        if (key != null)
+                        {
+                            memoryCache.Remove(key);
+                        }
+                    }
+                }
             }
         }
 
-        public async Task AddAsync(string key, object? value, TimeSpan expiration, bool invalidate)
+        public Task AddAsync(string key, object? value, TimeSpan expiration)
         {
             if (!options.Enable)
             {
-                return;
+                return Task.CompletedTask;
             }
 
             memoryCache.Set(key, value, expiration);
 
-            if (invalidate)
-            {
-                await InvalidateAsync(key);
-            }
+            return Task.CompletedTask;
         }
 
-        public async Task RemoveAsync(string key)
+        public async Task RemoveAsync(params string[] keys)
         {
             if (!options.Enable)
             {
                 return;
             }
 
-            memoryCache.Remove(key);
+            foreach (var key in keys)
+            {
+                if (key != null)
+                {
+                    memoryCache.Remove(key);
+                }
+            }
 
-            await InvalidateAsync(key);
+            await InvalidateAsync(keys);
         }
 
         public bool TryGetValue(string key, out object? value)
@@ -94,18 +106,23 @@ namespace Squidex.Caching
             return memoryCache.TryGetValue(key, out value);
         }
 
-        private Task InvalidateAsync(string key)
+        private Task InvalidateAsync(params string[] keys)
         {
             if (options.WaitForAcknowledgment)
             {
-                return pubSub.PublishAsync(new InvalidateMessage { Key = key, Source = instanceId });
+                return pubSub.PublishAsync(CreateMessage(keys));
             }
             else
             {
-                pubSub.PublishAsync(new InvalidateMessage { Key = key, Source = instanceId });
+                pubSub.PublishAsync(CreateMessage(keys));
 
                 return Task.CompletedTask;
             }
+        }
+
+        private InvalidateMessage CreateMessage(string[] keys)
+        {
+            return new InvalidateMessage { Keys = keys, Source = instanceId };
         }
     }
 }

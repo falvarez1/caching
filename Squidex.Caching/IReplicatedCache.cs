@@ -12,9 +12,9 @@ namespace Squidex.Caching
 {
     public interface IReplicatedCache
     {
-        Task AddAsync(string key, object? value, TimeSpan expiration, bool invalidate = false);
+        Task AddAsync(string key, object? value, TimeSpan expiration);
 
-        Task RemoveAsync(string key);
+        Task RemoveAsync(params string[] keys);
 
         bool TryGetValue(string key, out object? value);
     }
