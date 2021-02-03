@@ -64,7 +64,7 @@ namespace Squidex.Caching
             {
                 if (memoryCache.TryGetValue(key, out var cached2))
                 {
-                    if (cached is Entry<T> entry)
+                    if (cached2 is Entry<T> entry)
                     {
                         RefreshInBackground(entry, key, expiration, now, isValid, creator).Forget();
                         return entry.Value;
