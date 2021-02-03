@@ -28,7 +28,7 @@ namespace Squidex.Caching
         [Fact]
         public async Task Should_serve_from_cache()
         {
-            await sut.AddAsync("Key", 1, TimeSpan.FromMinutes(10), true);
+            await sut.AddAsync("Key", 1, TimeSpan.FromMinutes(10));
 
             AssertCache(sut, "Key", 1, true);
 
@@ -38,11 +38,11 @@ namespace Squidex.Caching
         }
 
         [Fact]
-        public async Task Should_not_serve_from_cache_disabled()
+        public async Task Should_not_serve_from_cache_when_disabled()
         {
             options.Enable = false;
 
-            await sut.AddAsync("Key", 1, TimeSpan.FromMilliseconds(100), true);
+            await sut.AddAsync("Key", 1, TimeSpan.FromMilliseconds(100));
 
             AssertCache(sut, "Key", null, false);
         }
@@ -50,7 +50,7 @@ namespace Squidex.Caching
         [Fact]
         public async Task Should_not_serve_from_cache_when_expired()
         {
-            await sut.AddAsync("Key", 1, TimeSpan.FromMilliseconds(1), true);
+            await sut.AddAsync("Key", 1, TimeSpan.FromMilliseconds(1));
 
             await Task.Delay(100);
 
@@ -58,28 +58,15 @@ namespace Squidex.Caching
         }
 
         [Fact]
-        public async Task Should_not_invalidate_other_instances_when_item_added_and_flag_is_false()
+        public async Task Should_not_invalidate_other_instances_when_added()
         {
             var cache1 = new ReplicatedCache(CreateMemoryCache(), pubSub, Options.Create(options));
             var cache2 = new ReplicatedCache(CreateMemoryCache(), pubSub, Options.Create(options));
 
-            await cache1.AddAsync("Key", 1, TimeSpan.FromMinutes(1), false);
-            await cache2.AddAsync("Key", 2, TimeSpan.FromMinutes(1), false);
+            await cache1.AddAsync("Key", 1, TimeSpan.FromMinutes(1));
+            await cache2.AddAsync("Key", 2, TimeSpan.FromMinutes(1));
 
             AssertCache(cache1, "Key", 1, true);
-            AssertCache(cache2, "Key", 2, true);
-        }
-
-        [Fact]
-        public async Task Should_invalidate_other_instances_when_item_added_and_flag_is_true()
-        {
-            var cache1 = new ReplicatedCache(CreateMemoryCache(), pubSub, Options.Create(options));
-            var cache2 = new ReplicatedCache(CreateMemoryCache(), pubSub, Options.Create(options));
-
-            await cache1.AddAsync("Key", 1, TimeSpan.FromMinutes(1), true);
-            await cache2.AddAsync("Key", 2, TimeSpan.FromMinutes(1), true);
-
-            AssertCache(cache1, "Key", null, false);
             AssertCache(cache2, "Key", 2, true);
         }
 
@@ -89,7 +76,7 @@ namespace Squidex.Caching
             var cache1 = new ReplicatedCache(CreateMemoryCache(), pubSub, Options.Create(options));
             var cache2 = new ReplicatedCache(CreateMemoryCache(), pubSub, Options.Create(options));
 
-            await cache1.AddAsync("Key", 1, TimeSpan.FromMinutes(1), true);
+            await cache1.AddAsync("Key", 1, TimeSpan.FromMinutes(1));
             await cache2.RemoveAsync("Key");
 
             AssertCache(cache1, "Key", null, false);
@@ -97,29 +84,11 @@ namespace Squidex.Caching
         }
 
         [Fact]
-        public async Task Should_send_invalidation_message_when_added_and_flag_is_true()
-        {
-            await sut.AddAsync("Key", 1, TimeSpan.FromMinutes(1), true);
-
-            A.CallTo(() => pubSub.PublishAsync(A<object>._))
-                .MustHaveHappened();
-        }
-
-        [Fact]
-        public async Task Should_not_send_invalidation_message_when_added_flag_is_false()
-        {
-            await sut.AddAsync("Key", 1, TimeSpan.FromMinutes(1), false);
-
-            A.CallTo(() => pubSub.PublishAsync(A<object>._))
-                .MustNotHaveHappened();
-        }
-
-        [Fact]
-        public async Task Should_not_send_invalidation_message_when_added_but_disabled()
+        public async Task Should_not_send_invalidation_message_when_not_enabled()
         {
             options.Enable = false;
 
-            await sut.AddAsync("Key", 1, TimeSpan.FromMinutes(1), true);
+            await sut.RemoveAsync("Key");
 
             A.CallTo(() => pubSub.PublishAsync(A<object>._))
                 .MustNotHaveHappened();

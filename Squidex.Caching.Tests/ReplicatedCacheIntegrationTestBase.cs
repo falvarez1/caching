@@ -42,7 +42,8 @@ namespace Squidex.Caching
             {
                 sharedValue = value;
 
-                await cache.AddAsync("KEY", sharedValue, TimeSpan.FromSeconds(10), true);
+                await cache.AddAsync("KEY", sharedValue, TimeSpan.FromSeconds(10));
+                await cache.RemoveAsync("KEY");
             }
 
             public async Task<Guid> GetValueAsync()
