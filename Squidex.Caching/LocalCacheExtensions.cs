@@ -12,7 +12,7 @@ namespace Squidex.Caching
 {
     public static class LocalCacheExtensions
     {
-        public static async Task<T> GetOrCreateAsync<T>(this ILocalCache cache, object key, Func<Task<T>> task)
+        public static async Task<T> GetOrCreateAsync<T>(this ILocalCache cache, object key, Func<Task<T>> creator)
         {
             if (cache.TryGetValue(key, out var value))
             {
@@ -26,7 +26,28 @@ namespace Squidex.Caching
                 }
             }
 
-            var result = await task();
+            var result = await creator();
+
+            cache.Add(key, result);
+
+            return result;
+        }
+
+        public static T GetOrCreate<T>(this ILocalCache cache, object key, Func<T> creator)
+        {
+            if (cache.TryGetValue(key, out var value))
+            {
+                if (value is T typed)
+                {
+                    return typed;
+                }
+                else
+                {
+                    return default!;
+                }
+            }
+
+            var result = creator();
 
             cache.Add(key, result);
 
